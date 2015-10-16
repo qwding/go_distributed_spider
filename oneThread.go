@@ -1,5 +1,10 @@
 package main
 
+/**
+ * @author carlding
+ * @date : 2015-10-10
+ */
+
 import (
 	"flag"
 	"fmt"
@@ -23,12 +28,12 @@ var logger *log.Logger
 var Visit map[string]Address
 var target []string = []string{"golang", "docker"}
 var count int64 = 0
-var hasFile string = "has.txt"
 
 //flag
 var (
 	help        *bool   = flag.Bool("help", false, "see help detail.")
 	saveFile    *string = flag.String("file", "ret.txt", "save result into file.")
+	hasFile     *string = flag.String("has", "has.txt", "save has result into file.")
 	timeout     *int    = flag.Int("timeout", 2, "dail tcp connect timeout.default is 2s.")
 	giveUrls    *string = flag.String("urls", "http://hedengcheng.com", "give spider urls,use ',' split the urls")
 	giveTargets *string = flag.String("targets", "golang,docker", "give spider targets,use ',' split the target")
@@ -85,7 +90,7 @@ func OutputRes() {
 	defer allFile.Close()
 
 	//save has result
-	hasFile, err := os.OpenFile(hasFile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	hasFile, err := os.OpenFile(*hasFile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if err != nil {
 		logger.Println("Open file error,", err)
 	}
@@ -94,12 +99,12 @@ func OutputRes() {
 	var num int64 = 0
 	var has int64 = 0
 	for k, address := range Visit {
-		str := fmt.Sprintf("%-4d has: %-5t,  url:%s\n", num, address.Has, k)
+		str := fmt.Sprintf("%-4d has: %-5t,  url:  %s\n", num, address.Has, k)
 		// logger.Printf("%-4d  has: %t,url: %-40s\n", num, address.Has, k)
 		logger.Printf(str)
 		allFile.WriteString(str)
 		if address.Has {
-			hasFile.WriteString(fmt.Sprintf("%-4d has: %-5t,  url:%s\n", has, address.Has, k))
+			hasFile.WriteString(fmt.Sprintf("%-4d has: %-5t,  url:  %s\n", has, address.Has, k))
 		}
 		num++
 		has++
@@ -112,7 +117,7 @@ func Spider(urls []string) {
 		return
 	}
 
-	logger.Printf("%-4d Spidering ... ... ... url is : %s\n", count, urls[0])
+	logger.Printf("%-4d Spidering ... ... ... url is:   %s\n", count, urls[0])
 	count++
 	// logger.Println("debug urls is                 ", urls)
 	// logger.Println("visit is ******", Visit)
