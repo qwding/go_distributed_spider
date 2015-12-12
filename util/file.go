@@ -11,10 +11,3 @@ func IsExist(file string) bool {
 	}
 	return true
 }
-
-func DebugArray(arr []string) {
-	method := "DebugArray"
-	for i, val := range arr {
-		logger.Println(method, i, val)
-	}
-}
