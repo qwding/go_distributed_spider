@@ -10,11 +10,14 @@ import (
 )
 
 type Config struct {
-	Master      string
-	Port        string
-	Start       []string
-	Scheme      string
-	DailTimeout int
+	Master        string
+	Target        []string
+	Port          string
+	Start         []string
+	Scheme        string
+	DailTimeout   int
+	AllF          string
+	MatchFDefault string
 }
 
 const defaultConfigPath string = "config/config.json"

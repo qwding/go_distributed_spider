@@ -26,10 +26,18 @@ type SlaveSpider struct {
 }
 
 func NewSlaveSpider(config *config.Config) *SlaveSpider {
+	method := "NewSlaveSpider"
 	spider := &SlaveSpider{Urls: []string{}, NewUrls: []string{}, Config: config}
 	/*spider.Maps = map[string]func() {
 		Url: spider.Base,
 	}*/
+	for i, val := range config.Target {
+		spider.Target += val
+		if i < len(config.Target)-1 {
+			spider.Target += "|"
+		}
+	}
+	logrus.Debugln(method, "target is:", spider.Target)
 	if config.DailTimeout != 0 {
 		spider.DailTimeout = time.Duration(config.DailTimeout) * time.Second
 	} else {
@@ -200,7 +208,7 @@ func MatchUrls(parentUrl, body string) []string {
 				url = parentUrlHead[0] + url
 			}
 		}
-		if strings.HasPrefix(url, "#") {
+		if strings.Contains(url, "#") {
 			url = ""
 		}
 		url = strings.TrimSpace(url)

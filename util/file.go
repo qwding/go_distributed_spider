@@ -11,3 +11,12 @@ func IsExist(file string) bool {
 	}
 	return true
 }
+
+func RemoveFile(file string) error {
+	if !IsExist(file) {
+		return nil
+	} else {
+		err := os.Remove(file)
+		return err
+	}
+}

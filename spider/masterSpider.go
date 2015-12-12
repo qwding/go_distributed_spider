@@ -7,6 +7,7 @@ import (
 	"go_distributed_spider/config"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -16,13 +17,21 @@ type MasterSpider struct {
 	Urls    urls                                                    //record all the urls
 	Index   int                                                     //record in which the urls have been distributed.
 	Maps    map[string]func(w http.ResponseWriter, r *http.Request) //just for look beauty.no use.
+	AllF    string
+	MatchF  string
 }
 
-func NewMasterSpider(config *config.Config) *MasterSpider {
-	spider := &MasterSpider{Config: config, Urls: newUrls(config.Start), Index: 0, idxLock: new(sync.RWMutex)}
+func NewMasterSpider(conf *config.Config) *MasterSpider {
+	spider := &MasterSpider{Config: conf, Urls: newUrls(conf.Start), Index: 0, idxLock: new(sync.RWMutex)}
 	spider.Maps = map[string]func(w http.ResponseWriter, r *http.Request){
 		Url:      spider.Base,
 		"/hello": spider.Hello,
+	}
+	if conf.AllF == "" {
+		spider.AllF = AllFDefault
+	}
+	if conf.MatchFDefault == "" {
+		spider.MatchF = MatchFDefault
 	}
 	return spider
 }
@@ -48,8 +57,13 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//add the urls which slave given to the all list.
 	s.Urls.addList(slaveToMaster.NewUrls)
 
+	//record all urls and match to file.
+	err = s.SaveToFile(slaveToMaster)
+
+	//master send task to slave
 	var masterToSlave MasterToSlave
 	if s.Index >= len(s.Urls) {
 		masterToSlave.Task = []string{}
@@ -59,7 +73,7 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 		s.idxLock.Unlock()
 	}
 
-	logrus.Debugln("all urls length:", len(s.Urls), "index:", s.Index, "send task:", len(masterToSlave.Task), "slaveToMaster:", len(slaveToMaster.NewUrls))
+	logrus.Debugln("all urls length:", len(s.Urls), "index:", s.Index, "send task:", len(masterToSlave.Task), "slaveToMaster match:", len(slaveToMaster.Match), "slaveToMaster NewUrls:", len(slaveToMaster.NewUrls))
 	// logrus.Debugln("index", s.Index, "send urls:", masterToSlave.Task)
 	// logrus.Debugln("slave give urls:", slaveToMaster.NewUrls)
 
@@ -74,4 +88,41 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 func (s *MasterSpider) Hello(w http.ResponseWriter, r *http.Request) {
 	method := "Hello"
 	w.Write([]byte(method + " spider"))
+}
+
+func (s *MasterSpider) SaveToFile(slaveToMaster SlaveToMaster) error {
+	method := "MasterSpider SaveTdoFile"
+	allf, err := os.OpenFile(s.AllF, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		logrus.Errorln(method, err)
+		return err
+	}
+	defer allf.Close()
+
+	matchf, err := os.OpenFile(s.MatchF, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		logrus.Errorln(method, err)
+		return err
+	}
+	defer matchf.Close()
+
+	all := ""
+	for _, val := range slaveToMaster.NewUrls {
+		if !s.Urls.inList(val) {
+			all += val + "\n"
+		}
+	}
+	match := ""
+	for _, val := range slaveToMaster.Match {
+		match += val + "\n"
+	}
+	_, err = allf.WriteString(all)
+	if err != nil {
+		return err
+	}
+	_, err = matchf.WriteString(match)
+	if err != nil {
+		return err
+	}
+	return nil
 }

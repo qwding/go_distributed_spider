@@ -1,0 +1,26 @@
+{
+    "test": {
+      *  "scheme":"http",
+      *  "master": "127.0.0.1",
+      *  "port":"9001",
+         "dailTimeout":2,
+         "allf":"all.txt",
+         "matchf":"matchf.txt",
+      *  "target":[
+            "docker",
+            "golang"
+        ]
+      *  "start": [
+            "http://hedengcheng.com",
+            "http://carlding.tk"
+        ]
+    },
+    "pro": {
+        "master": "localhost",
+        "port":"10001",
+        "start": [
+            "http://hedengcheng.com",
+            "carlding.tk"
+        ]
+    }
+}

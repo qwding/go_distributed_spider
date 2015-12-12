@@ -5,6 +5,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"go_distributed_spider/config"
 	"go_distributed_spider/spider"
+	"go_distributed_spider/util"
 	"net/http"
 )
 
@@ -19,6 +20,14 @@ func (m *Master) Init(config *config.Config) {
 	logrus.Infoln(method)
 	m.Config = config
 	m.Spider = spider.NewMasterSpider(config)
+	err := util.RemoveFile(m.Spider.AllF)
+	if err != nil {
+		logrus.Errorln(method, err)
+	}
+	err = util.RemoveFile(m.Spider.MatchF)
+	if err != nil {
+		logrus.Errorln(method, err)
+	}
 	m.Mux = http.NewServeMux()
 	for k, v := range m.Spider.Maps {
 		m.Mux.HandleFunc(k, v)
