@@ -11,6 +11,8 @@ import (
 
 type Config struct {
 	Master        string
+	IfPicture     bool
+	PicturePath   string
 	Target        []string
 	Port          string
 	Start         []string
@@ -20,7 +22,10 @@ type Config struct {
 	MatchFDefault string
 }
 
-const defaultConfigPath string = "config/config.json"
+const (
+	defaultConfigPath  string = "config/config.json"
+	defaultPicturePath string = "picture"
+)
 
 func (c *Config) GetUrl() string {
 	return c.Scheme + "://" + c.Master + ":" + c.Port

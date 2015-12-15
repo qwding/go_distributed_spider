@@ -4,13 +4,14 @@
         "master": "127.0.0.1",
         "port":"9001",
         "dailTimeout":2,
+        "ifpicture": true,
+        "picturePath":"picture",
         "target":[
-            "docker",
-            "golang"
+            "黑客",
+            "红客"
         ],
         "start": [
-            "http://www.ruanyifeng.com/blog/",
-            "http://carlding.tk"
+            "http://www.ruanyifeng.com/blog"
         ]
     },
     "pro": {

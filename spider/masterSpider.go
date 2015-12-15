@@ -49,7 +49,7 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 		return
 	}
-	var slaveToMaster SlaveToMaster
+	var slaveToMaster *SlaveToMaster
 	err = json.Unmarshal(bodyBytes, &slaveToMaster)
 	if err != nil {
 		logrus.Errorln(method, err)
@@ -57,11 +57,13 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	idxBefore := len(s.Urls)
 	//add the urls which slave given to the all list.
 	s.Urls.addList(slaveToMaster.NewUrls)
+	idxAfter := len(s.Urls)
 
 	//record all urls and match to file.
-	err = s.SaveToFile(slaveToMaster)
+	err = s.SaveToFile(slaveToMaster, idxBefore, idxAfter)
 
 	//master send task to slave
 	var masterToSlave MasterToSlave
@@ -90,7 +92,7 @@ func (s *MasterSpider) Hello(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(method + " spider"))
 }
 
-func (s *MasterSpider) SaveToFile(slaveToMaster SlaveToMaster) error {
+func (s *MasterSpider) SaveToFile(slaveToMaster *SlaveToMaster, idxBefore, idxAfter int) error {
 	method := "MasterSpider SaveTdoFile"
 	allf, err := os.OpenFile(s.AllF, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
@@ -107,19 +109,20 @@ func (s *MasterSpider) SaveToFile(slaveToMaster SlaveToMaster) error {
 	defer matchf.Close()
 
 	all := ""
-	for _, val := range slaveToMaster.NewUrls {
-		if !s.Urls.inList(val) {
-			all += val + "\n"
-		}
+	for _, val := range s.Urls[idxBefore:idxAfter] {
+		all += val + "\n"
 	}
-	match := ""
-	for _, val := range slaveToMaster.Match {
-		match += val + "\n"
-	}
+	logrus.Debugln(method, idxBefore, idxAfter)
 	_, err = allf.WriteString(all)
 	if err != nil {
 		return err
 	}
+
+	match := ""
+	for _, val := range slaveToMaster.Match {
+		match += val + "\n"
+	}
+
 	_, err = matchf.WriteString(match)
 	if err != nil {
 		return err

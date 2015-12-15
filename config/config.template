@@ -5,6 +5,8 @@
       *  "port":"9001",
          "dailTimeout":2,
          "allf":"all.txt",
+         "ifpicture": true,
+         "picturePath":"picture"
          "matchf":"matchf.txt",
       *  "target":[
             "docker",

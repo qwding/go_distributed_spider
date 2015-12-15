@@ -23,6 +23,7 @@ func init() {
 	mflag.BoolVar(&master, []string{"m", "-master", "#mt"}, false, "if the master server.")
 	mflag.BoolVar(&help, []string{"h", "-help", "#hhhhelp"}, false, "show help.")
 	mflag.StringVar(&env, []string{"e", "-env"}, "test", "which config env to run.")
+	// mflag.BoolVar(&picture, []string{"i", "-image"}, false, "download the picture that go throuth.")
 	mflag.StringVar(&conffile, []string{"f", "-config"}, "", "point a config file.default is config/config.json.")
 	mflag.Parse()
 

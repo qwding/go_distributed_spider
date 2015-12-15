@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"github.com/Sirupsen/logrus"
 	"go_distributed_spider/config"
+	"go_distributed_spider/util"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
+	"path"
 	"regexp"
-	// "strconv"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -69,7 +72,11 @@ func (s *SlaveSpider) Base() {
 			s.Urls = masterToSlave.Task
 			time.Sleep(time.Second * 2)
 		} else {
-			s.MatchOnce()
+			err := s.MatchOnce()
+			if err != nil {
+				logrus.Errorln(method, err)
+				continue
+			}
 		}
 
 	}
@@ -156,9 +163,31 @@ func (s *SlaveSpider) MatchOnce() error {
 	}
 
 	// logrus.Println("resp is ", string(bodyByte))
+	countAvailable, err := s.MatchUrlOnce(url, string(bodyByte))
+	if err != nil {
+		logrus.Errorln(method, err)
+		return err
+	}
 
+	logrus.Infof("%s Search URL: %s. Get child: %d. ", method, url, countAvailable)
+	if s.Config.IfPicture {
+		pictureNum, err := s.MatchPictureOnce(url, string(bodyByte))
+		if err != nil {
+			logrus.Errorln(method, err)
+			return err
+		}
+		logrus.Infof("picture num: %d\n", pictureNum)
+	} else {
+		logrus.Infof("\n")
+	}
+
+	resp.Body.Close()
+	return nil
+}
+
+func (s *SlaveSpider) MatchUrlOnce(url, body string) (int, error) {
 	//match child urls in the page.
-	matchUrls := MatchUrls(url, string(bodyByte))
+	matchUrls := MatchUrls(url, body)
 	countAvailable := 0
 	for _, url := range matchUrls {
 		if url == "" {
@@ -170,14 +199,68 @@ func (s *SlaveSpider) MatchOnce() error {
 	}
 
 	//if this url has target.Add to the match.
-	if IsTarget(string(bodyByte), s.Target) {
+	if IsTarget(body, s.Target) {
 		s.Match = append(s.Match, url)
 	}
 
-	logrus.Infoln(method, "Search URL:", url, "Get child:", countAvailable)
+	return countAvailable, nil
+}
 
-	resp.Body.Close()
-	return nil
+func (s *SlaveSpider) MatchPictureOnce(parentUrl, body string) (int, error) {
+	method := "MatchPictureOnce"
+	_ = method
+	//<\s*(a|img)\s*(href|src)="(http://)?[0-9a-zA-Z/_\.#-]*[^/"]
+	//find all have link part
+	urlMatch := regexp.MustCompile(`<\s*(a|img)\s*(src)="(http://|https://)?[0-9a-zA-Z/_\.#-]*[^/"]`)
+	urls := urlMatch.FindAllString(body, -1)
+
+	//parse parent url.use for getting like "/abc".
+	parseParentUrl := regexp.MustCompile(`(http://|https://)?[0-9a-zA-Z_\.#-]*[^/]`)
+	parentUrlHead := parseParentUrl.FindAllString(parentUrl, 1)
+
+	fmt.Println("debug .urls before:", urls)
+	geturlMatch := regexp.MustCompile(`src="(http://|https://)?[0-9a-zA-Z/_\.#-]*`)
+	for i := 0; i < len(urls); i++ {
+		href := geturlMatch.FindAllString(urls[i], 1)
+		if len(href) == 0 || len(href[0]) <= 6 {
+			// logrus.Println(method, "len(href) is ", href, "and url is ", urls[i])
+			urls[i] = ""
+			continue
+		}
+		url := href[0][5:]
+		if strings.HasPrefix(url, "/") {
+			if len(parentUrlHead) <= 0 {
+				url = ""
+			} else {
+				url = parentUrlHead[0] + url
+			}
+		}
+		if strings.Contains(url, "#") {
+			url = ""
+		}
+		url = strings.TrimSpace(url)
+		urls[i] = strings.TrimSuffix(url, "/")
+	}
+
+	fmt.Println("debug .urls after:", urls)
+
+	for _, val := range urls {
+		logrus.Infoln("pictur url:", val)
+		if !strings.HasPrefix(val, "http") {
+			continue
+		}
+
+		name := path.Base(val)
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		prefix := r.Intn(10000)
+
+		err := util.DownPicture(s.Config.PicturePath, strconv.Itoa(prefix)+"-"+name, val)
+		if err != nil {
+			logrus.Errorln(method, err)
+			continue
+		}
+	}
+	return len(urls), nil
 }
 
 func MatchUrls(parentUrl, body string) []string {
