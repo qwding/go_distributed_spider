@@ -5,6 +5,8 @@
       *  "port":"9001",
          "dailTimeout":2,
          "allf":"all.txt",
+         "ifdownHtml": true,
+         "downhtmlpath": "html",
          "ifpicture": true,
          "picturePath":"picture"
          "matchf":"matchf.txt",
@@ -15,7 +17,7 @@
       *  "start": [
             "http://hedengcheng.com",
             "http://carlding.tk"
-        ]
+        ],
     },
     "pro": {
         "master": "localhost",

@@ -3,8 +3,8 @@ package distributed
 import (
 	"github.com/Sirupsen/logrus"
 	"go_distributed_spider/config"
+
 	"go_distributed_spider/spider"
-	"go_distributed_spider/util"
 )
 
 type Slave struct {
@@ -18,14 +18,10 @@ func (m *Slave) Init(conf *config.Config) {
 	m.Config = conf
 	m.Spider = spider.NewSlaveSpider(conf)
 
-	//picture path check.
-	if conf.IfPicture {
-		err := util.MakedirPath(conf.PicturePath)
-		if err != nil {
-			logrus.Errorln(method, err)
-		}
+	//init plugins.
+	for _, plugin := range m.Spider.Plugins {
+		plugin.Init()
 	}
-
 }
 
 func (m *Slave) Done(str string) {

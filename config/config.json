@@ -4,22 +4,38 @@
         "master": "127.0.0.1",
         "port":"9001",
         "dailTimeout":2,
-        "ifpicture": true,
-        "picturePath":"picture",
-        "target":[
-            "黑客",
-            "红客"
-        ],
-        "start": [
-            "http://www.ruanyifeng.com/blog"
-        ]
+        "controller":{
+            "start": [
+                "http://seshowclub.com/index.php"
+            ],
+            "target":[
+                "激情"
+            ],
+            "filter":{
+                "only":[
+                    "http://seshowclub.com"
+                ],
+                "cut":[
+                    "http://www.baidu.com"
+                ]
+            },
+            "ifpicture": true,
+            "picturePath":"picture2"
+        }
     },
     "pro": {
-        "master": "localhost",
-        "port":"10001",
+        "scheme":"http",
+        "master": "127.0.0.1",
+        "port":"9001",
+        "dailTimeout":2,
+        "ifpicture": false,
+        "picturePath":"picture",
+        "target":[
+            "edcapding",
+            "testding"
+        ],
         "start": [
-            "http://hedengcheng.com",
-            "carlding.tk"
+            "https://console.tenxcloud.com"
         ]
     }
 }

@@ -22,7 +22,7 @@ type MasterSpider struct {
 }
 
 func NewMasterSpider(conf *config.Config) *MasterSpider {
-	spider := &MasterSpider{Config: conf, Urls: newUrls(conf.Start), Index: 0, idxLock: new(sync.RWMutex)}
+	spider := &MasterSpider{Config: conf, Urls: newUrls(conf.Controller.Start), Index: 0, idxLock: new(sync.RWMutex)}
 	spider.Maps = map[string]func(w http.ResponseWriter, r *http.Request){
 		Url:      spider.Base,
 		"/hello": spider.Hello,
@@ -57,9 +57,11 @@ func (s *MasterSpider) Base(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newUrls := s.FilterUrls(slaveToMaster.NewUrls)
+
 	idxBefore := len(s.Urls)
 	//add the urls which slave given to the all list.
-	s.Urls.addList(slaveToMaster.NewUrls)
+	s.Urls.addList(newUrls)
 	idxAfter := len(s.Urls)
 
 	//record all urls and match to file.
@@ -128,4 +130,19 @@ func (s *MasterSpider) SaveToFile(slaveToMaster *SlaveToMaster, idxBefore, idxAf
 		return err
 	}
 	return nil
+}
+
+func (s *MasterSpider) FilterUrls(urls []string) []string {
+	res := []string{}
+
+	if len(s.Config.Controller.Filter.Only) > 0 {
+		for _, url := range s.Config.Controller.Filter.Only {
+
+		}
+		return res
+	} else if len(s.Config.Controller.Filter.Cut) {
+
+		return res
+	}
+	return urls
 }

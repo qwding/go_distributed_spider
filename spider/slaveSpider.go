@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"github.com/Sirupsen/logrus"
 	"go_distributed_spider/config"
+	"go_distributed_spider/plugins"
 	"go_distributed_spider/util"
 	"io/ioutil"
-	"math/rand"
+	// "math/rand"
 	"net"
 	"net/http"
-	"path"
+	// "path"
 	"regexp"
-	"strconv"
+	// "strconv"
 	"strings"
 	"time"
 )
@@ -26,6 +27,7 @@ type SlaveSpider struct {
 	Urls        []string //tasks
 	NewUrls     []string //send to master
 	Match       []string //task matchs
+	Plugins     []plugins.Plugins
 }
 
 func NewSlaveSpider(config *config.Config) *SlaveSpider {
@@ -34,9 +36,9 @@ func NewSlaveSpider(config *config.Config) *SlaveSpider {
 	/*spider.Maps = map[string]func() {
 		Url: spider.Base,
 	}*/
-	for i, val := range config.Target {
+	for i, val := range config.Controller.Target {
 		spider.Target += val
-		if i < len(config.Target)-1 {
+		if i < len(config.Controller.Target)-1 {
 			spider.Target += "|"
 		}
 	}
@@ -47,6 +49,8 @@ func NewSlaveSpider(config *config.Config) *SlaveSpider {
 		spider.DailTimeout = DefaultDailTimeout
 	}
 	fmt.Println("time out is :", spider.DailTimeout)
+	spider.Plugins = plugins.GetPlugins(config)
+
 	return spider
 }
 
@@ -149,7 +153,14 @@ func (s *SlaveSpider) MatchOnce() error {
 			},
 		},
 	}
-	resp, err := client.Get(url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logrus.Errorln(method, err)
+		return err
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		logrus.Infoln(method, "http get error", err)
 		return err
@@ -170,17 +181,18 @@ func (s *SlaveSpider) MatchOnce() error {
 	}
 
 	logrus.Infof("%s Search URL: %s. Get child: %d. ", method, url, countAvailable)
-	if s.Config.IfPicture {
-		pictureNum, err := s.MatchPictureOnce(url, string(bodyByte))
+
+	//if config download html.
+	if s.Config.Controller.IfDownHtml {
+		err = util.SaveFile(s.Config.Controller.DownHtmlPath /*strconv.Itoa(prefix)+"-"+*/, url, bodyByte)
 		if err != nil {
 			logrus.Errorln(method, err)
-			return err
 		}
-		logrus.Infof("picture num: %d\n", pictureNum)
-	} else {
-		logrus.Infof("\n")
 	}
 
+	for _, plugin := range s.Plugins {
+		plugin.Done(url, bodyByte)
+	}
 	resp.Body.Close()
 	return nil
 }
@@ -204,63 +216,6 @@ func (s *SlaveSpider) MatchUrlOnce(url, body string) (int, error) {
 	}
 
 	return countAvailable, nil
-}
-
-func (s *SlaveSpider) MatchPictureOnce(parentUrl, body string) (int, error) {
-	method := "MatchPictureOnce"
-	_ = method
-	//<\s*(a|img)\s*(href|src)="(http://)?[0-9a-zA-Z/_\.#-]*[^/"]
-	//find all have link part
-	urlMatch := regexp.MustCompile(`<\s*(a|img)\s*(src)="(http://|https://)?[0-9a-zA-Z/_\.#-]*[^/"]`)
-	urls := urlMatch.FindAllString(body, -1)
-
-	//parse parent url.use for getting like "/abc".
-	parseParentUrl := regexp.MustCompile(`(http://|https://)?[0-9a-zA-Z_\.#-]*[^/]`)
-	parentUrlHead := parseParentUrl.FindAllString(parentUrl, 1)
-
-	fmt.Println("debug .urls before:", urls)
-	geturlMatch := regexp.MustCompile(`src="(http://|https://)?[0-9a-zA-Z/_\.#-]*`)
-	for i := 0; i < len(urls); i++ {
-		href := geturlMatch.FindAllString(urls[i], 1)
-		if len(href) == 0 || len(href[0]) <= 6 {
-			// logrus.Println(method, "len(href) is ", href, "and url is ", urls[i])
-			urls[i] = ""
-			continue
-		}
-		url := href[0][5:]
-		if strings.HasPrefix(url, "/") {
-			if len(parentUrlHead) <= 0 {
-				url = ""
-			} else {
-				url = parentUrlHead[0] + url
-			}
-		}
-		if strings.Contains(url, "#") {
-			url = ""
-		}
-		url = strings.TrimSpace(url)
-		urls[i] = strings.TrimSuffix(url, "/")
-	}
-
-	fmt.Println("debug .urls after:", urls)
-
-	for _, val := range urls {
-		logrus.Infoln("pictur url:", val)
-		if !strings.HasPrefix(val, "http") {
-			continue
-		}
-
-		name := path.Base(val)
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		prefix := r.Intn(10000)
-
-		err := util.DownPicture(s.Config.PicturePath, strconv.Itoa(prefix)+"-"+name, val)
-		if err != nil {
-			logrus.Errorln(method, err)
-			continue
-		}
-	}
-	return len(urls), nil
 }
 
 func MatchUrls(parentUrl, body string) []string {
